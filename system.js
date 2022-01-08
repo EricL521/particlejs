@@ -15,16 +15,16 @@ class System {
             this.space[i] = new Array(xDivisions);
         for (let i = 0; i < this.space.length; i ++)
             for (let j = 0; j < this.space[i].length; j ++)
-                this.space[i][j] = new Set({x: j, y: i});
+                this.space[i][j] = new ParticleSet({x: j, y: i});
         
         this.allParticles = new Set();
     }
 
     // stop after seconds, optional
     start(seconds) {
-        this.timeInterval = setInterval(this.update, this.settings.updateInterval);
+        this.timeInterval = setInterval(this.update.bind(this), this.settings.updateInterval);
         if (seconds)
-            setTimeout(this.stop, seconds * 1000);
+            setTimeout(this.stop.bind(this), seconds * 1000);
     }
     stop() {
         clearInterval(this.timeInterval);
@@ -45,7 +45,9 @@ class System {
             particle.updateForces(this.getNeighbors(particle));
         });
         this.allParticles.forEach(particle => {
-            const newDivision = this.getDivision(particle.update());
+            const newPos = particle.update();
+            const newDivisionCoords = this.getDivision(newPos.x, newPos.y);
+            const newDivision = this.space[newDivisionCoords.y][newDivisionCoords.x];
             if (particle.division === newDivision)
                 return; // don't do the rest
             particle.division.delete(particle);
