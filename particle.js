@@ -1,11 +1,17 @@
 class Particle {
-    // position: {x, y}
+    /* options:
+    {
+        mass, position,
+        optionals:
+        velocity, 
+    }
+    */
     // onUpdate is a function (this)
-    constructor (position, onUpdate) {
-        this.mass = 1;
+    constructor (options, onUpdate) {
+        this.mass = options.mass;
         this.acceleration = {x: 0, y: 0};
-        this.speed = {x: 0, y: 0};
-        this.position = position;
+        this.velocity = options.velocity? options.velocity: {x: 0, y: 0};
+        this.position = options.position;
 
         // sphere where the particle can influence other particles
         // should be calced based on optimal distance, and strength
@@ -45,37 +51,33 @@ class Particle {
         const targetDistance = particle.targetDistance + this.targetDistance;
 
         const distance = Math.sqrt(Math.pow(this.position.x - x, 2) + Math.pow(this.position.y - y, 2));
-        const accelerationMagnitude = strength / (distance) + strength / (distance - targetDistance);
+        const pushMagnitude = 10 * strength / distance; // magnitude of the push away
+        const pullMagnitude = strength / (targetDistance - distance + (targetDistance > distance)? strength/2 : -strength/2)  // magnitude of the pull towards
         const angle = Math.atan2(this.position.y - y, this.position.x - x);
 
-        let accelerationX, accelerationY;
-        // this particle is pulled towards that location
-        if (targetDistance < distance) {
-            accelerationX = - (accelerationMagnitude * Math.cos(angle)) / this.mass;
-            accelerationY = - (accelerationMagnitude * Math.sin(angle)) / this.mass;
-        }
-        // this particle is pulled away from that location
-        else if (targetDistance > distance) {
-            accelerationX = (accelerationMagnitude * Math.cos(angle)) / this.mass;
-            accelerationY = (accelerationMagnitude * Math.sin(angle)) / this.mass;
-        }
+        let accelerationX = 0, accelerationY = 0;
+        accelerationX += (pushMagnitude * Math.cos(angle));
+        accelerationY += (pushMagnitude * Math.sin(angle));
+        accelerationX -= (pullMagnitude * Math.cos(angle));
+        accelerationY -= (pullMagnitude * Math.sin(angle));
+
         // update this accleration
-        this.acceleration.x += accelerationX;
-        this.acceleration.y += accelerationY;
+        this.acceleration.x += accelerationX / this.mass;
+        this.acceleration.y += accelerationY / this.mass;
         // update other particle with the opposite
-        particle.acceleration.x -= accelerationX;
-        particle.acceleration.y -= accelerationY;
+        particle.acceleration.x -= accelerationX / particle.mass;
+        particle.acceleration.y -= accelerationY / particle.mass;
         
     }
 
-    // update position, speed, and acceleration
+    // update position, velocity, and acceleration
     // returns new position
     update() {
-        this.speed.x += this.acceleration.x;
-        this.speed.y += this.acceleration.y;
+        this.velocity.x += this.acceleration.x;
+        this.velocity.y += this.acceleration.y;
         
-        this.position.x += this.speed.x;
-        this.position.y += this.speed.y;
+        this.position.x += this.velocity.x;
+        this.position.y += this.velocity.y;
 
         // reset acceleration because it will be updated next cycle
         this.acceleration.x = 0;
