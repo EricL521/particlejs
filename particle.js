@@ -3,7 +3,7 @@ class Particle {
     {
         mass, position,
         optionals:
-        velocity, 
+        velocity, targetDistance
     }
     */
     // onUpdate is a function (this)
@@ -16,13 +16,13 @@ class Particle {
         // represented by particle's apparent size/radius
         // preferred distance from center that other particles' size should be should be
         // should be less than influence radius
-        this.targetDistance = 25;
+        this.targetDistance = options.targetDistance? options.targetDistance: 25;
         // strength of the force that pushes particles towards the optimal distance
         this.strength = 10;
 
         // sphere where the particle can influence other particles
         // should be calced based on optimal distance, and strength
-        this.influenceRadius = 5 * this.targetDistance;
+        this.influenceRadius = this.strength * this.targetDistance;
 
         this.division;
 
@@ -51,8 +51,8 @@ class Particle {
         const targetDistance = particle.targetDistance + this.targetDistance;
 
         const distance = Math.sqrt(Math.pow(this.position.x - x, 2) + Math.pow(this.position.y - y, 2));
-        const pushMagnitude = strength / Math.pow(distance, 1.5); // magnitude of the push away
-        const pullMagnitude = Particle.getPull(strength, distance, targetDistance); // magnitude of the pull towards
+        const pushMagnitude = strength / Math.pow(distance/targetDistance, Math.E); // magnitude of the push away
+        const pullMagnitude = strength / Math.pow(distance/targetDistance, 2); // magnitude of the pull towards
         const angle = Math.atan2(this.position.y - y, this.position.x - x);
 
         let accelerationX = 0, accelerationY = 0;
@@ -71,10 +71,11 @@ class Particle {
     }
     // returns pullMagnitude
     static getPull (strength, distance, targetDistance) {
-        const offSet = targetDistance + 1.5*strength*Math.log(targetDistance);
-        return (strength * Math.pow(Math.E, (distance - offSet) / strength)) /
+        const magnitude = strength;
+        const offSet = targetDistance + strength*Math.log(targetDistance*targetDistance*magnitude/strength); // Math.log is ln
+        return (magnitude * Math.pow(Math.E, (distance - offSet) / strength)) /
         Math.pow(Math.pow(Math.E, (distance - offSet)) + 1, 2);
-    } 
+    }
 
     // update position, velocity, and acceleration
     // returns new position

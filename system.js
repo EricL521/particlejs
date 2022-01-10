@@ -8,6 +8,7 @@ class System {
     */
     constructor(divisionSize, xDivisions, yDivisions, settings) {
         this.settings = settings;
+        this.numUpdates = 0; // goes up by one every time update is run
 
         this.divisionSize = divisionSize;
         this.space = new Array(yDivisions);
@@ -54,6 +55,8 @@ class System {
             newDivision.add(particle);
             particle.division = newDivision;
         });
+
+        this.numUpdates ++;
     }
     // returns a set of particles that are within influence radius
     getNeighbors(particle) {
