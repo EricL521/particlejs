@@ -17,6 +17,7 @@ class Particle {
         // preferred distance from center that other particles' size should be should be
         // should be less than influence radius
         this.targetDistance = options.targetDistance? options.targetDistance: 25;
+        this.radius = this.targetDistance;
         // strength of the force that pushes particles towards the optimal distance
         this.strength = 10;
 
@@ -39,15 +40,124 @@ class Particle {
     // updates all accelerations
     updateForces(particlesInInfleunce) {
         particlesInInfleunce.delete(this); // remove this particle
-        particlesInInfleunce.forEach(particle => {
-            particle.interact(this);
-        });
+        // sort particles by distance (closest first) into an array
+        const particles = this.sortParticles(particlesInInfleunce);
+
+        // when a particle is updated, it blocks particles behind it
+        const blockedAngles = new Set();
+        for (const value of particles) {
+            const particle = value.particle;
+
+            // determine how much of the particle is blocked by other particles
+            const particleRange = Particle.getRange(value.angle, particle.radius, value.distance);
+            const particleAngle = Particle.getRangeSize(particleRange); // size of the angle that the particle takes up
+            let blockedAngle = 0; // size of the angle that is blocked
+            for (const range of blockedAngles) {
+                if (Particle.inRange(range, particleRange[0]))
+                    blockedAngle += Particle.getRangeSize([particleRange[0], range[1]]);
+                if (Particle.inRange(range, particleRange[1]))
+                    blockedAngle += Particle.getRangeSize([range[0], particleRange[1]]);
+            }
+
+            // if blocked
+            if (blockedAngle > 0) {
+                // if not totally blocked, interact with particle
+                if (blockedAngle <= particleAngle)
+                    particle.interact(this, Math.pow(1 - (blockedAngle/particleAngle), 2));
+                
+                // if everything is blocked
+                if (Particle.mergeRange(blockedAngles, particleRange))
+                    break;
+            }
+            // if unblocked
+            else {
+                particle.interact(this, 1);
+
+                // add range to blocked angles
+                blockedAngles.add(particleRange);
+            }
+        };
     }
+    // returns an array that is sorted by increasing distance
+    sortParticles(set) {
+        const array = new Array(set.size);
+        let i = 0;
+        set.forEach(particle => {
+            const x = particle.position.x;
+            const y = particle.position.y;
+            array[i] = {
+                particle: particle,
+                distance: Math.sqrt(Math.pow(this.position.x - x, 2) + Math.pow(this.position.y - y, 2)),
+                angle: Math.atan2(this.position.y - y, this.position.x - x)
+            }
+
+            i ++;
+        });
+        // subtract radius b/c a larger radius can mean a closer difference
+        array.sort((a, b) => (a.distance - a.particle.radius) - (b.distance - b.particle.radius));
+
+        return array;
+    }
+    // returns the angle range around an angle
+    static getRange(angle, radius, distance) {
+        const circumference = 2 * Math.PI * distance;
+        const angleDifference = radius / circumference * 2 * Math.PI;
+        return [(angle - angleDifference) % (2 * Math.PI), (angle + angleDifference) % (2 * Math.PI)];
+    }
+    // returns the size of a range
+    static getRangeSize(range) {
+        return (range[1] - range[0]) % (2 * Math.PI);
+    }
+    // returns true or false if the angle is in the given range
+    static inRange(range, angle) {
+        if (range[0] <= range[1])
+            return (range[0] <= angle && angle <= range[1])
+        // if range is directly to the right
+        else {
+            if (angle >= range[0])
+                return angle <= range[1] + 2 * Math.PI
+            if (angle <= range[1])
+                return angle >= range[1] - 2 * Math.PI
+        }
+    }
+    // merges a range with other ranges in a set
+    // edits rangeSet, so returns nothing
+    // returns true if the range covers everything
+    // otherwise returns nothing
+    static mergeRange(rangeSet, newRange) {
+        let lowerRange;
+        let higherRange;
+        rangeSet.forEach(range => {
+            if (Particle.inRange(range, newRange[0]))
+                lowerRange = range;
+            if (Particle.inRange(range, newRange[1]))
+                higherRange = range;
+        });
+
+        // return true if the new merged range will cover everything
+        if (lowerRange === higherRange && 2 * Math.PI - Particle.getRangeSize(lowerRange) <= Particle.getRangeSize(newRange))
+            return true;
+
+        const mergedRange = new Array(...newRange);
+        // merge with ranges
+        if (lowerRange) {
+            rangeSet.delete(lowerRange);
+            mergedRange[0] = lowerRange[0];
+        }
+        if (higherRange) {
+            rangeSet.delete(higherRange);
+            mergedRange[1] = higherRange[1];
+        }
+
+        rangeSet.add(mergedRange);
+    }
+    
     // interacts with this particle from that position at that strength
-    interact (particle) {
+    // the strength is multiplied by the scalar
+    interact (particle, scalar) {
         const x = particle.position.x;
         const y = particle.position.y;
-        const strength = particle.strength;
+        const strength = particle.strength * scalar;
         const targetDistance = particle.targetDistance + this.targetDistance;
 
         const distance = Math.sqrt(Math.pow(this.position.x - x, 2) + Math.pow(this.position.y - y, 2));
@@ -68,13 +178,6 @@ class Particle {
         particle.acceleration.x -= accelerationX / particle.mass;
         particle.acceleration.y -= accelerationY / particle.mass;
         
-    }
-    // returns pullMagnitude
-    static getPull (strength, distance, targetDistance) {
-        const magnitude = strength;
-        const offSet = targetDistance + strength*Math.log(targetDistance*targetDistance*magnitude/strength); // Math.log is ln
-        return (magnitude * Math.pow(Math.E, (distance - offSet) / strength)) /
-        Math.pow(Math.pow(Math.E, (distance - offSet)) + 1, 2);
     }
 
     // update position, velocity, and acceleration
