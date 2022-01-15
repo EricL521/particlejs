@@ -63,7 +63,7 @@ class Particle {
             if (blockedAngle > 0) {
                 // if not totally blocked, interact with particle
                 if (blockedAngle <= particleAngle)
-                    particle.interact(this, 1 - (blockedAngle/particleAngle));
+                    particle.interact(this, Math.pow(1 - (blockedAngle/particleAngle), 2));
                 
                 // if everything is blocked
                 if (Particle.mergeRange(blockedAngles, particleRange))
@@ -151,6 +151,7 @@ class Particle {
 
         rangeSet.add(mergedRange);
     }
+    
     // interacts with this particle from that position at that strength
     // the strength is multiplied by the scalar
     interact (particle, scalar) {
