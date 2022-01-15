@@ -3,8 +3,8 @@ class System {
     // divisions are how many areas of space the particles are grouped into
     /* settings is a JSON:
     {
-        updateInterval,
-        friction
+        updateInterval: number,
+        friction: number
     }
     */
     constructor(divisionSize, xDivisions, yDivisions, settings) {

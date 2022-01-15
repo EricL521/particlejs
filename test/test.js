@@ -3,7 +3,7 @@ const particleContainer = document.getElementById("particle-container");
 
 const system = new System(100, 20, 10, {
     updateInterval: 7.5, // milliseconds
-    friction: true
+    friction: 100
 });
 
 let locations = [{
@@ -17,16 +17,20 @@ let locations = [{
 }];
 let velocities = [{
     x: 0, y: 0
+}, {
+    x: 0, y: 0
 }];
-let masses = [10, 10, 10, 10, 10, 10];
+let masses = [200, 100, 100, 100, 100, 100, 100, 100, 100];
+let distances = [50];
 for (let j = 0; j < 3; j ++)
     for (let i = 0; i < 3; i ++) {
         const particle = new Particle({
-            mass: 100,
+            mass: masses[3*j+i],
             position: {
-                x: 900 + 51*j,
-                y: 400 + 51*i
+                x: 900 + 50*j,
+                y: 400 + 50*i
             },
+            targetDistance: distances[3*j+i],
             velocity: velocities[3*j+i]
         }, (thisParticle) => {
             circle.setAttributeNS(null, "cx", thisParticle.position.x);

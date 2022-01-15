@@ -181,13 +181,15 @@ class Particle {
     }
 
     // update position, velocity, and acceleration
-    // firction is a bool
     // returns new position
     update(friction) {
         if (friction) {
             const angle = Math.atan2(this.velocity.y, this.velocity.x);
-            this.acceleration.x -= Math.cos(angle)/this.mass/50;
-            this.acceleration.y -= Math.sin(angle)/this.mass/50;
+            this.acceleration.x -= Math.cos(angle)/this.mass/friction;
+            this.acceleration.y -= Math.sin(angle)/this.mass/friction;
+            
+            this.velocity.x /= 1 + (this.mass / Math.pow(friction, Math.E));
+            this.velocity.y /= 1 + (this.mass / Math.pow(friction, Math.E));
         }
 
         this.velocity.x += this.acceleration.x;
