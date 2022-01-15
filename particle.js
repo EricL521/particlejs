@@ -50,22 +50,24 @@ class Particle {
 
             // determine how much of the particle is blocked by other particles
             const particleRange = Particle.getRange(value.angle, particle.radius, value.distance);
-            const particleAngle = (particleRange[1] - particleRange[0]) % (2 * Math.PI); // size of the angle that the particle takes up
+            const particleAngle = Particle.getRangeSize(particleRange); // size of the angle that the particle takes up
             let blockedAngle = 0; // size of the angle that is blocked
             for (const range of blockedAngles) {
-                if (range[0] <= particleRange[0] && particleRange[0] <= range[1])
-                    blockedAngle += range[1] - particleRange[0];
-                if (range[0] <= particleRange[1] && particleRange[1] <= range[1])
-                    blockedAngle += particleRange[1] - range[0];
+                if (Particle.inRange(range, particleRange[0]))
+                    blockedAngle += Particle.getRangeSize([particleRange[0], range[1]]);
+                if (Particle.inRange(range, particleRange[1]))
+                    blockedAngle += Particle.getRangeSize([range[0], particleRange[1]]);
             }
-            
+
             // if blocked
             if (blockedAngle > 0) {
                 // if not totally blocked, interact with particle
                 if (blockedAngle <= particleAngle)
                     particle.interact(this, 1 - (blockedAngle/particleAngle));
                 
-                Particle.mergeRange(blockedAngles, particleRange);
+                // if everything is blocked
+                if (Particle.mergeRange(blockedAngles, particleRange))
+                    break;
             }
             // if unblocked
             else {
@@ -102,18 +104,41 @@ class Particle {
         const angleDifference = radius / circumference * 2 * Math.PI;
         return [(angle - angleDifference) % (2 * Math.PI), (angle + angleDifference) % (2 * Math.PI)];
     }
+    // returns the size of a range
+    static getRangeSize(range) {
+        return (range[1] - range[0]) % (2 * Math.PI);
+    }
+    // returns true or false if the angle is in the given range
+    static inRange(range, angle) {
+        if (range[0] <= range[1])
+            return (range[0] <= angle && angle <= range[1])
+        // if range is directly to the right
+        else {
+            if (angle >= range[0])
+                return angle <= range[1] + 2 * Math.PI
+            if (angle <= range[1])
+                return angle >= range[1] - 2 * Math.PI
+        }
+    }
     // merges a range with other ranges in a set
     // edits rangeSet, so returns nothing
+    // returns true if the range covers everything
+    // otherwise returns nothing
     static mergeRange(rangeSet, newRange) {
         let lowerRange;
         let higherRange;
         rangeSet.forEach(range => {
-            if (range[0] <= newRange[0] && newRange[0] <= range[1])
+            if (Particle.inRange(range, newRange[0]))
                 lowerRange = range;
-            if (range[0] <= newRange[1] && newRange[1] <= range[1])
+            if (Particle.inRange(range, newRange[1]))
                 higherRange = range;
         });
-        const mergedRange = new Array(newRange);
+
+        // return true if the new merged range will cover everything
+        if (lowerRange === higherRange && 2 * Math.PI - Particle.getRangeSize(lowerRange) <= Particle.getRangeSize(newRange))
+            return true;
+
+        const mergedRange = new Array(...newRange);
         // merge with ranges
         if (lowerRange) {
             rangeSet.delete(lowerRange);
@@ -121,10 +146,10 @@ class Particle {
         }
         if (higherRange) {
             rangeSet.delete(higherRange);
-            mergedRange[1] = lowerRange[1];
+            mergedRange[1] = higherRange[1];
         }
+
         rangeSet.add(mergedRange);
-        
     }
     // interacts with this particle from that position at that strength
     // the strength is multiplied by the scalar

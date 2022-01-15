@@ -18,7 +18,7 @@ let velocities = [{
     x: 0, y: 0
 }];
 let masses = [10, 10, 10, 10, 10, 10];
-for (let j = 0; j < 1; j ++)
+for (let j = 0; j < 3; j ++)
     for (let i = 0; i < 3; i ++) {
         const particle = new Particle({
             mass: 100,
