@@ -2,7 +2,8 @@ var svgns = "http://www.w3.org/2000/svg";
 const particleContainer = document.getElementById("particle-container");
 
 const system = new System(100, 20, 10, {
-    updateInterval: 7.5 // milliseconds
+    updateInterval: 7.5, // milliseconds
+    friction: true
 });
 
 let locations = [{

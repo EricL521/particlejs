@@ -1,7 +1,7 @@
 class Particle {
     /* options:
     {
-        mass, position,
+        mass, position
         optionals:
         velocity, targetDistance
     }
@@ -181,8 +181,15 @@ class Particle {
     }
 
     // update position, velocity, and acceleration
+    // firction is a bool
     // returns new position
-    update() {
+    update(friction) {
+        if (friction) {
+            const angle = Math.atan2(this.velocity.y, this.velocity.x);
+            this.acceleration.x -= Math.cos(angle)/this.mass/50;
+            this.acceleration.y -= Math.sin(angle)/this.mass/50;
+        }
+
         this.velocity.x += this.acceleration.x;
         this.velocity.y += this.acceleration.y;
         

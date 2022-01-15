@@ -3,7 +3,8 @@ class System {
     // divisions are how many areas of space the particles are grouped into
     /* settings is a JSON:
     {
-        updateInterval
+        updateInterval,
+        friction
     }
     */
     constructor(divisionSize, xDivisions, yDivisions, settings) {
@@ -46,7 +47,7 @@ class System {
             particle.updateForces(this.getNeighbors(particle));
         });
         this.allParticles.forEach(particle => {
-            const newPos = particle.update();
+            const newPos = particle.update(this.settings.friction);
             const newDivisionCoords = this.getDivision(newPos.x, newPos.y);
             const newDivision = this.space[newDivisionCoords.y][newDivisionCoords.x];
             if (particle.division === newDivision)
