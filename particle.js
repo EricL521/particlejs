@@ -17,6 +17,7 @@ class Particle {
         // preferred distance from center that other particles' size should be should be
         // should be less than influence radius
         this.targetDistance = options.targetDistance? options.targetDistance: 25;
+        this.radius = this.targetDistance;
         // strength of the force that pushes particles towards the optimal distance
         this.strength = 10;
 
@@ -39,46 +40,61 @@ class Particle {
     // updates all accelerations
     updateForces(particlesInInfleunce) {
         particlesInInfleunce.delete(this); // remove this particle
-        const particles = new Array(particlesInInfleunce.size);
-        let i = -1;
-        particlesInInfleunce.forEach(particle => {
-            i ++;
+        // sort particles by distance (closest first) into an array
+        const particles = this.sortParticles(particlesInInfleunce);
 
-            const x = particle.position.x;
-            const y = particle.position.y;
-            particles[i] = {
-                particle: particle,
-                distance: Math.sqrt(Math.pow(this.position.x - x, 2) + Math.pow(this.position.y - y, 2)),
-                angle: Math.atan2(this.position.y - y, this.position.x - x)
-            }
-        });
-        particles.sort((a, b) => (a.distance - a.particle.influenceRadius) - (b.distance - b.particle.influenceRadius));
-
+        // when a particle is updated, it blocks particles behind it
         const blockedAngles = new Set();
         for (const value of particles) {
             const particle = value.particle;
 
             // determine how much of the particle is blocked by other particles
-            const particleRange = Particle.getRange(value.angle, particles.influenceRadius, value.distance);
-            let blockedRange = 0;
-            blockedAngles.forEach(range => {
+            const particleRange = Particle.getRange(value.angle, particle.radius, value.distance);
+            const particleAngle = (particleRange[1] - particleRange[0]) % (2 * Math.PI); // size of the angle that the particle takes up
+            let blockedAngle = 0; // size of the angle that is blocked
+            for (const range of blockedAngles) {
                 if (range[0] <= particleRange[0] && particleRange[0] <= range[1])
-                    blockedRange += range[1] - particleRange[0];
+                    blockedAngle += range[1] - particleRange[0];
                 if (range[0] <= particleRange[1] && particleRange[1] <= range[1])
-                    blockedRange += particleRange[1] - range[0];
-            });
+                    blockedAngle += particleRange[1] - range[0];
+            }
+            
             // if blocked
-            if (blockedRange > 0) {
+            if (blockedAngle > 0) {
                 // if not totally blocked, interact with particle
-                if (blockedRange <= particleRange)
-                    particle.interact(this, 1 - (blockedRange/particleRange));
+                if (blockedAngle <= particleAngle)
+                    particle.interact(this, 1 - (blockedAngle/particleAngle));
                 
-                this.mergeRange(blockedAngles, particleRange);
+                Particle.mergeRange(blockedAngles, particleRange);
             }
             // if unblocked
-            else
+            else {
                 particle.interact(this, 1);
+
+                // add range to blocked angles
+                blockedAngles.add(particleRange);
+            }
         };
+    }
+    // returns an array that is sorted by increasing distance
+    sortParticles(set) {
+        const array = new Array(set.size);
+        let i = 0;
+        set.forEach(particle => {
+            const x = particle.position.x;
+            const y = particle.position.y;
+            array[i] = {
+                particle: particle,
+                distance: Math.sqrt(Math.pow(this.position.x - x, 2) + Math.pow(this.position.y - y, 2)),
+                angle: Math.atan2(this.position.y - y, this.position.x - x)
+            }
+
+            i ++;
+        });
+        // subtract radius b/c a larger radius can mean a closer difference
+        array.sort((a, b) => (a.distance - a.particle.radius) - (b.distance - b.particle.radius));
+
+        return array;
     }
     // returns the angle range around an angle
     static getRange(angle, radius, distance) {
@@ -88,13 +104,13 @@ class Particle {
     }
     // merges a range with other ranges in a set
     // edits rangeSet, so returns nothing
-    mergeRange(rangeSet, newRange) {
+    static mergeRange(rangeSet, newRange) {
         let lowerRange;
         let higherRange;
         rangeSet.forEach(range => {
-            if (range[0] <= particleRange[0] && particleRange[0] <= range[1])
+            if (range[0] <= newRange[0] && newRange[0] <= range[1])
                 lowerRange = range;
-            if (range[0] <= particleRange[1] && particleRange[1] <= range[1])
+            if (range[0] <= newRange[1] && newRange[1] <= range[1])
                 higherRange = range;
         });
         const mergedRange = new Array(newRange);

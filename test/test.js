@@ -21,10 +21,10 @@ let masses = [10, 10, 10, 10, 10, 10];
 for (let j = 0; j < 1; j ++)
     for (let i = 0; i < 3; i ++) {
         const particle = new Particle({
-            mass: 1000,
+            mass: 100,
             position: {
-                x: 900 + 50*j,
-                y: 400 + 50*i
+                x: 900 + 51*j,
+                y: 400 + 51*i
             },
             velocity: velocities[3*j+i]
         }, (thisParticle) => {
@@ -36,7 +36,7 @@ for (let j = 0; j < 1; j ++)
 
         const circle = document.createElementNS(svgns, "circle");
         circle.id = "particle" + (3*j+i);
-        circle.setAttributeNS(null, "r", particle.targetDistance);
+        circle.setAttributeNS(null, "r", particle.radius);
         circle.setAttributeNS(null, "cx", particle.position.x);
         circle.setAttributeNS(null, "cy", particle.position.y);
         circle.setAttributeNS(null, "draggable", true);
