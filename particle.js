@@ -3,7 +3,7 @@ class Particle {
     {
         mass, position
         optionals:
-        velocity, targetDistance
+        velocity, targetDistance, strength
     }
     */
     // onUpdate is a function (this)
@@ -19,7 +19,7 @@ class Particle {
         this.targetDistance = options.targetDistance? options.targetDistance: 25;
         this.radius = this.targetDistance;
         // strength of the force that pushes particles towards the optimal distance
-        this.strength = 10;
+        this.strength = options.strength? options.strength: 10;
 
         // sphere where the particle can influence other particles
         // should be calced based on optimal distance, and strength
@@ -183,13 +183,10 @@ class Particle {
     // update position, velocity, and acceleration
     // returns new position
     update(friction) {
-        if (friction) {
+        if (friction && !(this.velocity.x === 0 && this.velocity.y === 0)) {
             const angle = Math.atan2(this.velocity.y, this.velocity.x);
-            this.acceleration.x -= Math.cos(angle)/this.mass/friction;
-            this.acceleration.y -= Math.sin(angle)/this.mass/friction;
-            
-            this.velocity.x /= 1 + (this.mass / Math.pow(friction, Math.E));
-            this.velocity.y /= 1 + (this.mass / Math.pow(friction, Math.E));
+            this.acceleration.x -= Math.cos(angle)*friction/100;
+            this.acceleration.y -= Math.sin(angle)*friction/100;
         }
 
         this.velocity.x += this.acceleration.x;

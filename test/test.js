@@ -1,9 +1,16 @@
 var svgns = "http://www.w3.org/2000/svg";
 const particleContainer = document.getElementById("particle-container");
+function componentToHex(c) {
+    let hex = c.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+}
+function rgbToHex(r, g, b) {
+    return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+}
 
 const system = new System(100, 20, 10, {
     updateInterval: 7.5, // milliseconds
-    friction: 100
+    friction: Math.E/500
 });
 
 let locations = [{
@@ -20,16 +27,18 @@ let velocities = [{
 }, {
     x: 0, y: 0
 }];
-let masses = [200, 100, 100, 100, 100, 100, 100, 100, 100];
-let distances = [50];
-for (let j = 0; j < 3; j ++)
+let masses = [];
+let distances = [30];
+let strengths = [];
+for (let j = 0; j < 1; j ++)
     for (let i = 0; i < 3; i ++) {
         const particle = new Particle({
-            mass: masses[3*j+i],
+            mass: masses[3*j+i]? masses[3*j+i]: 100,
             position: {
                 x: 900 + 50*j,
-                y: 400 + 50*i
+                y: 500 + 50*i
             },
+            strength: strengths[3*j+i],
             targetDistance: distances[3*j+i],
             velocity: velocities[3*j+i]
         }, (thisParticle) => {
@@ -45,6 +54,7 @@ for (let j = 0; j < 3; j ++)
         circle.setAttributeNS(null, "cx", particle.position.x);
         circle.setAttributeNS(null, "cy", particle.position.y);
         circle.setAttributeNS(null, "draggable", true);
+        circle.setAttributeNS(null, "fill", rgbToHex(particle.mass/2, particle.strength * 10, 0));
         particleContainer.appendChild(circle);
     }
 

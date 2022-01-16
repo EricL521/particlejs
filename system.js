@@ -4,7 +4,7 @@ class System {
     /* settings is a JSON:
     {
         updateInterval: number,
-        friction: number
+        friction: number between 0 and 1
     }
     */
     constructor(divisionSize, xDivisions, yDivisions, settings) {
