@@ -1,14 +1,14 @@
 class Particle {
     /* options:
     {
-        mass, position
+        position
         optionals:
-        velocity, targetDistance, strength
+        mass, velocity, targetDistance, strength
     }
     */
     // onUpdate is a function (this)
     constructor (options, onUpdate) {
-        this.mass = options.mass;
+        this.mass = options.mass? options.mass: 100;
         this.acceleration = {x: 0, y: 0};
         this.velocity = options.velocity? options.velocity: {x: 0, y: 0};
         this.position = options.position;
@@ -199,7 +199,8 @@ class Particle {
         this.acceleration.x = 0;
         this.acceleration.y = 0;
 
-        this.onUpdate(this);
+        if (this.onUpdate)
+            this.onUpdate(this);
 
         return this.position;
     }
