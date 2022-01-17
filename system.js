@@ -5,6 +5,9 @@ class System {
     {
         updateInterval: number,
         friction: number between 0 and 1
+
+        optional:
+        onUpdate, called on update
     }
     */
     constructor(divisionSize, xDivisions, yDivisions, settings) {
@@ -68,6 +71,9 @@ class System {
         });
 
         this.numUpdates ++;
+
+        if (this.settings.onUpdate)
+            this.settings.onUpdate();
     }
     // returns a set of particles that are within influence radius
     getNeighbors(particle) {
