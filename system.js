@@ -49,12 +49,22 @@ class System {
         this.allParticles.forEach(particle => {
             const newPos = particle.update(this.settings.friction);
             const newDivisionCoords = this.getDivision(newPos.x, newPos.y);
-            const newDivision = this.space[newDivisionCoords.y][newDivisionCoords.x];
-            if (particle.division === newDivision)
-                return; // don't do the rest
-            particle.division.delete(particle);
-            newDivision.add(particle);
-            particle.division = newDivision;
+
+            // if not out of bounds
+            if (0 <= newDivisionCoords.y && newDivisionCoords.y < this.space.length && 
+                0 <= newDivisionCoords.x && newDivisionCoords.x < this.space[newDivisionCoords.y].length) {
+                
+                const newDivision = this.space[newDivisionCoords.y][newDivisionCoords.x];
+                if (particle.division === newDivision)
+                    return; // don't do the rest
+                if (particle.division)
+                    particle.division.delete(particle);
+                newDivision.add(particle);
+                particle.division = newDivision;
+            } else if (particle.division) { // if particle was already out of bounds, do nothing
+                particle.division.delete(particle);
+                particle.division = null;
+            }
         });
 
         this.numUpdates ++;
@@ -68,14 +78,19 @@ class System {
         const posMaxVals = this.getDivision(particle.position.x + particle.influenceRadius/2, particle.position.y + particle.influenceRadius/2);
         for (let y = posMinVals.y; y < Math.ceil(posMaxVals.unroundedY); y ++) // minVals is already Math.floored
             for (let x = posMinVals.x; x < Math.ceil(posMaxVals.unroundedX); x ++)
-                possibleRegions.add(this.space[y][x]);
+                if (0 <= y && y < this.space.length && 0 <= x && x < this.space[y].length) {// if not out of bounds 
+                    possibleRegions.add(this.space[y][x]);
+                    if (!this.space[y][x])
+                        console.log(y, x)
+                }
         const inMinVals = this.getDivision(particle.position.x - particle.influenceRadius/2/Math.sqrt(2), particle.position.y - particle.influenceRadius/2/Math.sqrt(2));
         const inMaxVals = this.getDivision(particle.position.x + particle.influenceRadius/2/Math.sqrt(2), particle.position.y + particle.influenceRadius/2/Math.sqrt(2));
         for (let y = Math.ceil(inMinVals.unroundedY); y < inMaxVals.y; y ++) // maxVALS is already Math.ceiled
-            for (let x = Math.ceil(inMinVals.unroundedX); x < inMaxVals.x; x ++) {
-                regionsInCircle.add(this.space[y][x]);
-                possibleRegions.delete(this.space[y][x]); // if it is in the circle, it doesn't need to be checked
-            }
+            for (let x = Math.ceil(inMinVals.unroundedX); x < inMaxVals.x; x ++)
+                if (0 <= y && y < this.space.length && 0 <= x && x < this.space[y].length) {
+                    regionsInCircle.add(this.space[y][x]);
+                    possibleRegions.delete(this.space[y][x]); // if it is in the circle, it doesn't need to be checked
+                }
         
         const particlesInRadius = new Set();
         regionsInCircle.forEach(region => {
