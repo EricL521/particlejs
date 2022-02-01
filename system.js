@@ -13,6 +13,7 @@ class System {
     constructor(divisionSize, xDivisions, yDivisions, settings) {
         this.settings = settings;
         this.numUpdates = 0; // goes up by one every time update is run
+        this.stopat; // if numupdates is equal to stopat, it will stop
 
         this.divisionSize = divisionSize;
         this.space = new Array(yDivisions);
@@ -29,7 +30,7 @@ class System {
     start(seconds) {
         this.timeInterval = setInterval(this.update.bind(this), this.settings.updateInterval);
         if (seconds)
-            setTimeout(this.stop.bind(this), seconds * 1000);
+            this.stopat = 1000 * seconds / this.settings.updateInterval + this.numUpdates;
     }
     stop() {
         clearInterval(this.timeInterval);
@@ -70,10 +71,12 @@ class System {
             }
         });
 
-        this.numUpdates ++;
-
         if (this.settings.onUpdate)
             this.settings.onUpdate();
+
+        this.numUpdates ++;
+        if (this.numUpdates === this.stopat)
+            this.stop();
     }
     // returns a set of particles that are within influence radius
     getNeighbors(particle) {

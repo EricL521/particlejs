@@ -20,7 +20,7 @@ let onUpdate = () => {
 
 const system = new System(100, 20, 10, {
     updateInterval: 5, // milliseconds
-    friction: Math.E/25,
+    // friction: Math.E*3/100,
     onUpdate: onUpdate
 });
 
@@ -37,18 +37,20 @@ let velocities = [{
     x: 0, y: 0
 }, {
     x: 0, y: 0
+}, {
+    x: 0, y: 0
 }];
 let masses = [];
-let distances = []
+let distances = [];
 let strengths = [];
-const height = 4;
+const height = 3;
 for (let j = 0; j < 4; j ++)
     for (let i = 0; i < height; i ++) {
         const particle = new Particle({
             mass: masses[height*j+i],
             position: {
-                x: 800 + 55*j,
-                y: 400 + 55*i
+                x: 800 + 50*j,
+                y: 400 + 50*i
             },
             strength: strengths[height*j+i],
             targetDistance: distances[height*j+i],
@@ -78,4 +80,4 @@ window.addEventListener("mouseup", () => {
     selectedParticle = null;
 });
 
-system.start();
+system.start(10);
