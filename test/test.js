@@ -5,8 +5,8 @@ const particleContainer = document.getElementById("particle-container");
 const mouseParticle = new Particle({
     position: {x: 0, y: 0},
     targetDistance: 0,
-    strength: 50,
-    mass: 100
+    strength: 100,
+    stationary: true
 });
 window.addEventListener("mousemove", (e) => {
     const size = particleContainer.getBoundingClientRect();
@@ -18,9 +18,11 @@ let onUpdate = () => {
         selectedParticle.interact(mouseParticle, 1);
 };
 
-const system = new System(100, 20, 10, {
-    updateInterval: 5, // milliseconds
-    // friction: Math.E*3/100,
+const system = new System(100, 20, 11, {
+    updateInterval: 5, // milliseconds, note: update testing with ~ 200 particle, update calculating time took around 1 ms
+    // friction: Math.E/100,
+    accuracy: 10, // higher accuracy means more accuracy, but slower run
+    gravity: {x: 0, y: 0},
     onUpdate: onUpdate
 });
 
@@ -40,17 +42,17 @@ let velocities = [{
 }, {
     x: 0, y: 0
 }];
-let masses = [];
-let distances = [];
-let strengths = [];
-const height = 3;
-for (let j = 0; j < 4; j ++)
+let masses = [1600];
+let distances = [100];
+let strengths = [100];
+const height = 6;
+for (let j = 0; j < 6; j ++)
     for (let i = 0; i < height; i ++) {
         const particle = new Particle({
             mass: masses[height*j+i],
             position: {
-                x: 800 + 50*j,
-                y: 400 + 50*i
+                x: 800 + 40*j,
+                y: 400 + 40*i
             },
             strength: strengths[height*j+i],
             targetDistance: distances[height*j+i],
@@ -68,16 +70,44 @@ for (let j = 0; j < 4; j ++)
         circle.setAttributeNS(null, "cx", particle.position.x);
         circle.setAttributeNS(null, "cy", particle.position.y);
         circle.setAttributeNS(null, "draggable", true);
-        circle.setAttributeNS(null, "fill", `rgb(${particle.mass/2}, ${particle.strength * 10}, 0)`);
+        circle.setAttributeNS(null, "fill", `rgb(${particle.mass/2}, ${particle.strength * 10}, ${255 * Math.random()})`);
         particleContainer.appendChild(circle);
 
         circle.addEventListener("mousedown", () => {
             selectedParticle = particle;
         });
     }
+
+for (let j = 0; j < 2; j ++)
+    for (let i = 0; i < 64; i ++) {
+        const particle = new Particle({
+            stationary: true,
+            position: {x: 30 * i, y: 1080 * j},
+            strength: 20,
+            targetDistance: 40,
+            influenceRadius: 60,
+            repelOnly: true,
+            unblockable: true,
+        });
+        system.addParticle(particle);
+    }
+for (let i = 0; i < 2; i ++)
+    for (let j = 0; j < 36; j ++) {
+        const particle = new Particle({
+            stationary: true,
+            position: {x: 1920 * i, y: 30 * j},
+            strength: 20,
+            targetDistance: 40,
+            influenceRadius: 60,
+            repelOnly: true,
+            unblockable: true,
+        })
+        system.addParticle(particle);
+    }
+
 let selectedParticle = null;
 window.addEventListener("mouseup", () => {
     selectedParticle = null;
 });
 
-system.start(10);
+system.start();

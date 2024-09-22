@@ -7,7 +7,9 @@ class System {
         friction: number between 0 and 1
 
         optional:
-        onUpdate, called on update
+        onUpdate: function called on update
+        accuracy: number, higher accuracy means slower run, acceleration is divided by accuracy
+        gravity: {x, y}, acceleration every time
     }
     */
     constructor(divisionSize, xDivisions, yDivisions, settings) {
@@ -30,7 +32,7 @@ class System {
     start(seconds) {
         this.timeInterval = setInterval(this.update.bind(this), this.settings.updateInterval);
         if (seconds)
-            this.stopat = 1000 * seconds / this.settings.updateInterval + this.numUpdates;
+            this.stopat = Math.round(1000 * seconds / this.settings.updateInterval + this.numUpdates);
     }
     stop() {
         clearInterval(this.timeInterval);
@@ -46,40 +48,58 @@ class System {
     }
 
     // main update function
-    update() {
+    update(logTime) {
+        const startTime = new Date();
+        
+        let particlePromises = [];
         this.allParticles.forEach(particle => {
-            particle.updateForces(this.getNeighbors(particle));
+            particlePromises.push(new Promise(res => {
+                this.getNeighbors(particle).then(neighbors => {
+                    res(particle.updateForces(neighbors));
+                });
+            }));
         });
-        this.allParticles.forEach(particle => {
-            const newPos = particle.update(this.settings.friction);
-            const newDivisionCoords = this.getDivision(newPos.x, newPos.y);
+        Promise.all(particlePromises).then(_ => {
+            particlePromises = [];
+            this.allParticles.forEach(particle => {
+                particlePromises.push(new Promise(res => {
+                    const newPos = particle.update(this.settings.gravity, this.settings.friction, 1 / this.settings.accuracy);
+                    const newDivisionCoords = this.getDivision(newPos.x, newPos.y);
 
-            // if not out of bounds
-            if (0 <= newDivisionCoords.y && newDivisionCoords.y < this.space.length && 
-                0 <= newDivisionCoords.x && newDivisionCoords.x < this.space[newDivisionCoords.y].length) {
-                
-                const newDivision = this.space[newDivisionCoords.y][newDivisionCoords.x];
-                if (particle.division === newDivision)
-                    return; // don't do the rest
-                if (particle.division)
-                    particle.division.delete(particle);
-                newDivision.add(particle);
-                particle.division = newDivision;
-            } else if (particle.division) { // if particle was already out of bounds, do nothing
-                particle.division.delete(particle);
-                particle.division = null;
-            }
+                    // if not out of bounds
+                    if (0 <= newDivisionCoords.y && newDivisionCoords.y < this.space.length && 
+                        0 <= newDivisionCoords.x && newDivisionCoords.x < this.space[newDivisionCoords.y].length) {
+                        
+                        const newDivision = this.space[newDivisionCoords.y][newDivisionCoords.x];
+                        if (particle.division === newDivision)
+                            return; // don't do the rest
+                        if (particle.division)
+                            particle.division.delete(particle);
+                        newDivision.add(particle);
+                        particle.division = newDivision;
+                    } else if (particle.division) { // if particle was in bounds before
+                        particle.division.delete(particle);
+                        particle.division = null;
+                    }
+                }));
+            });
+
+            Promise.all(particlePromises).then(_ => {
+                if (this.settings.onUpdate)
+                    this.settings.onUpdate();
+
+                this.numUpdates ++;
+                if (this.numUpdates === this.stopat)
+                    this.stop();
+
+                if (logTime)
+                    console.log(new Date() - startTime);
+            });
         });
 
-        if (this.settings.onUpdate)
-            this.settings.onUpdate();
-
-        this.numUpdates ++;
-        if (this.numUpdates === this.stopat)
-            this.stop();
     }
     // returns a set of particles that are within influence radius
-    getNeighbors(particle) {
+    async getNeighbors(particle) {
         const regionsInCircle = new Set(); // regions for sure in the circle
         const possibleRegions = new Set(); // regions whose particles should be checked
 
@@ -107,18 +127,23 @@ class System {
                 particlesInRadius.add(regionParticle);
             });
         });
+        let regionPromises = [];
         possibleRegions.forEach(region => {
-            const worldCoords = this.getWorldCoord(region);
-            const closestCorner = [
-                (particle.position.x - worldCoords.x > 0)? worldCoords.x + this.divisionSize/2: worldCoords.x - this.divisionSize/2,
-                (particle.position.y - worldCoords.y > 0)? worldCoords.y + this.divisionSize/2: worldCoords.y - this.divisionSize/2
-            ];
-            if (particle.inInfluence(...closestCorner))
-                region.forEach(regionParticle => {
-                    if (particle.inInfluence(regionParticle.position.x, regionParticle.position.y))
-                        particlesInRadius.add(regionParticle);
-                });
+            regionPromises.push(new Promise(res => {
+                const worldCoords = this.getWorldCoord(region);
+                const closestCorner = [
+                    (particle.position.x - worldCoords.x > 0)? worldCoords.x + this.divisionSize/2: worldCoords.x - this.divisionSize/2,
+                    (particle.position.y - worldCoords.y > 0)? worldCoords.y + this.divisionSize/2: worldCoords.y - this.divisionSize/2
+                ];
+                if (particle.inInfluence(...closestCorner))
+                    region.forEach(regionParticle => {
+                        if (particle.inInfluence(regionParticle.position.x, regionParticle.position.y))
+                            particlesInRadius.add(regionParticle);
+                    });
+                res();
+            }));
         });
+        await Promise.all(regionPromises);
         return particlesInRadius;
     }
     // returns {x, y, unroundedX, unroundedY}

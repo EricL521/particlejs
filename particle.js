@@ -2,8 +2,15 @@ class Particle {
     /* options:
     {
         position
-        optionals:
-        mass, velocity, targetDistance, strength
+        optionals & defaults:
+        mass: 100, 
+        velocity: 0, 
+        targetDistance: 50, 
+        strength: 20, 
+        repelOnly: false, 
+        stationary: false, 
+        influenceRadius: strength * targetDistance, 
+        unblockable: false (whether other particles can block this one), 
     }
     */
     // onUpdate is a function (this)
@@ -13,17 +20,19 @@ class Particle {
         this.velocity = options.velocity? options.velocity: {x: 0, y: 0};
         this.position = options.position;
         
+        this.options = options;
+        
         // represented by particle's apparent size/radius
         // preferred distance from center that other particles' size should be should be
         // should be less than influence radius
         this.targetDistance = options.targetDistance? options.targetDistance: 25;
         this.radius = this.targetDistance;
         // strength of the force that pushes particles towards the optimal distance
-        this.strength = options.strength? options.strength: 10;
+        this.strength = options.strength? options.strength: 25;
 
         // sphere where the particle can influence other particles
         // should be calced based on optimal distance, and strength
-        this.influenceRadius = this.strength * this.targetDistance;
+        this.influenceRadius = options.influenceRadius? options.influenceRadius : this.strength * this.targetDistance;
 
         this.division;
 
@@ -40,6 +49,14 @@ class Particle {
     // updates all accelerations
     updateForces(particlesInInfleunce) {
         particlesInInfleunce.delete(this); // remove this particle
+        if (this.options.unblockable) {
+            particlesInInfleunce.forEach(particle => {
+                particle.interact(this, 1);
+            });
+            return;
+        }
+        
+        // if not unblockable
         // sort particles by distance (closest first) into an array
         const particles = this.sortParticles(particlesInInfleunce);
 
@@ -76,7 +93,7 @@ class Particle {
                 // add range to blocked angles
                 blockedAngles.add(particleRange);
             }
-        };
+        }
     }
     // returns an array that is sorted by increasing distance
     sortParticles(set) {
@@ -151,10 +168,13 @@ class Particle {
 
         rangeSet.add(mergedRange);
     }
-    
+
     // interacts with this particle from that position at that strength
     // the strength is multiplied by the scalar
     interact (particle, scalar) {
+        if (this.options.stationary)
+            return; // if the particle being interacted with is stationary, don't interact
+
         const x = particle.position.x;
         const y = particle.position.y;
         const strength = particle.strength * scalar;
@@ -162,7 +182,7 @@ class Particle {
 
         const distance = Math.sqrt(Math.pow(this.position.x - x, 2) + Math.pow(this.position.y - y, 2));
         const pushMagnitude = strength / Math.pow(distance/targetDistance, Math.E); // magnitude of the push away
-        const pullMagnitude = strength / Math.pow(distance/targetDistance, 2); // magnitude of the pull towards
+        const pullMagnitude = (this.options.repelOnly || particle.options.repelOnly)? 0 : strength / Math.pow(distance/targetDistance, 2); // magnitude of the pull towards
         const angle = Math.atan2(this.position.y - y, this.position.x - x);
 
         let accelerationX = 0, accelerationY = 0;
@@ -172,25 +192,39 @@ class Particle {
         accelerationY -= (pullMagnitude * Math.sin(angle));
 
         // update this accleration
-        this.acceleration.x += accelerationX / this.mass;
-        this.acceleration.y += accelerationY / this.mass;
+        if (!this.options.stationary) {
+            this.acceleration.x += accelerationX / this.mass;
+            this.acceleration.y += accelerationY / this.mass;
+        }
         // update other particle with the opposite
-        particle.acceleration.x -= accelerationX / particle.mass;
-        particle.acceleration.y -= accelerationY / particle.mass;
+        if (!particle.options.stationary) {
+            particle.acceleration.x -= accelerationX / particle.mass;
+            particle.acceleration.y -= accelerationY / particle.mass;
+        }
         
     }
 
     // update position, velocity, and acceleration
+    // acceleration is multiplied by scalar
     // returns new position
-    update(friction) {
+    update(gravity, friction, scalar) {
+        // if stationary, dont update
+        if (this.options.stationary)
+            return this.position;
+        
+        if (gravity) {
+            this.acceleration.x += gravity.x;
+            this.acceleration.y += gravity.y;
+        }
+        
         if (friction && !(this.velocity.x === 0 && this.velocity.y === 0)) {
             const angle = Math.atan2(this.velocity.y, this.velocity.x);
-            this.acceleration.x -= Math.cos(angle)*friction/100;
-            this.acceleration.y -= Math.sin(angle)*friction/100;
+            this.acceleration.x -= Math.cos(angle)*friction/20;
+            this.acceleration.y -= Math.sin(angle)*friction/20;
         }
 
-        this.velocity.x += this.acceleration.x;
-        this.velocity.y += this.acceleration.y;
+        this.velocity.x += this.acceleration.x * scalar;
+        this.velocity.y += this.acceleration.y * scalar;
         
         this.position.x += this.velocity.x;
         this.position.y += this.velocity.y;
